@@ -11,6 +11,10 @@
 SPRITE: 	.byte 85,62
 BUFFER: 	.space 5300
 FILE1: 		.asciiz "ryu2.bin"	
+QUIT:		.asciiz "q"
+MOVE_RIGHT:	.asciiz "d"
+MOVE_LEFT:	.asciiz "a"
+
 
 .text
 Main:
@@ -37,9 +41,37 @@ Main:
 	li $a1,100
 	li $a2,0
 	jal PrintSprite
-
+	
+UpdateGame:
+	# Le um caracter do teclado, armazena em $v0[MARS]
+	li $v0, 12
+	syscall
+	
+	# Carrega os possiveis caracteres que movimentam a sprite $t0 = 'q', $t1 = 'd', $t2 = 'a'
+	la $t0, QUIT
+	la $t1, MOVE_RIGHT
+	la $t2, MOVE_LEFT
+	lb $t0, 0($t0)
+	lb $t1, 0($t1)
+	lb $t2, 0($t2)
+	
+	# Compara os valores e pula para o procedimento que move a sprite
+	beq $v0, $t0, Fim
+	beq $v0, $t1, move_sprite_right
+	beq $v0, $t2, move_sprite_left
+	
+move_sprite_right:
+	addi $a2, $a2, 5 	# Move a sprite 5 posicoes para a direita
+	jal PrintSprite
+	j UpdateGame
+	
+move_sprite_left:
+	addi $a2, $a2, -5	# Move a sprite 5 posicoes para a esquerda
+	jal PrintSprite
+	j UpdateGame
+	
 	# Fim do programa [MARS]
-	li $v0,10 
+Fim:	li $v0,10 
 	syscall
 	
 	# Fim do programa [FPGA]
