@@ -6,36 +6,39 @@
 .eqv	VGA 0xFF000000
 .eqv	VGA_WIDTH 320
 
-.data 
-# [HEIGHT] [WIDTH] [HB1] [HB2] [HB3]
-SPRITE: 	.byte 85,62
-BUFFER: 	.space 5300
-FILE1: 		.asciiz "ryu2.bin"	
+.data
+BUFFER_SPRITE1:		.space 5300
+BUFFER_SPRITE2:		.space 5300	
+SPRITE1_FILENAME: 	.asciiz "ryu1.bin"
+SPRITE2_FILENAME: 	.asciiz "ryu2.bin"
+# [SPRITE]            	[HEIGHT]	[WIDTH]	[HB1      ]  	[HB2      ] 	[HB3       ] 	[HB ATK	  ]	[HB DEF]
+SPRITE1_DATA: 	.byte 	85, 		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+SPRITE2_DATA:	.byte 	85,		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0
 
 .text
 Main:
-	# Abre o arquivo sprite
-	la $a0,FILE1
-	li $a1,0
-	li $a2,0
-	li $v0,13
-	syscall
+	# Lê o sprite 1 para o buffer 1
+	la $a0,SPRITE1_FILENAME
+	la $a1,BUFFER_SPRITE1
+	jal ReadFileToBuffer
+	
+	# Lê o sprite 2 para o buffer 2
+	la $a0,SPRITE2_FILENAME
+	la $a1,BUFFER_SPRITE2
+	jal ReadFileToBuffer
+	
+	# Printa o sprite 1 no display
+	la $a0,SPRITE1_DATA
+	la $a1,BUFFER_SPRITE1
+	li $a2,100
+	li $a3,20
+	jal PrintSprite
 
-	# Le o sprite para a memoria BUFFER
-	move $a0,$v0
-	la $a1,BUFFER
-	li $a2,5270
-	li $v0,14
-	syscall
-	
-	# Fecha o arquivo
-	li $v0,16
-	syscall
-	
-	# Carrega os argumentos e chama o procedimento PrintSprite
-	la $a0,SPRITE
-	li $a1,100
-	li $a2,0
+	# Printa o sprite 2 no display
+	la $a0,SPRITE2_DATA
+	la $a1,BUFFER_SPRITE2
+	li $a2,100
+	li $a3,200
 	jal PrintSprite
 
 	# Fim do programa [MARS]
@@ -51,17 +54,41 @@ MatchScreen:
 FightLoop:
 DefeatedOponentScreen:
 
-PrintSprite: #($a0 = ENDERECO SPRITE, $a1 = pos_x, $a2 = pos_y) 
+ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPRITE)
+	# Move ENDERECO BUFFER pro reg. temporário
+	move $t0, $a1
+	
+	# Abre o arquivo da sprite sprite - $a0 = ENDERECO NOME DO ARQUIVO
+	li $a1,0
+	li $a2,0
+	li $v0,13
+	syscall
+	
+	# Le o sprite para a memoria BUFFER
+	move $a0,$v0
+	move $a1,$t0
+	li $a2,5270
+	li $v0,14
+	syscall
+	
+	# Fecha o arquivo
+	li $v0,16
+	syscall
+	
+	# Retorna para o procedimento anterior
+	jr $ra
+
+PrintSprite: #($a0 = ENDERECO SPRITE, $a1 = ENDERECO DO BUFFER, $a2 = pos_x, $a3 = pos_y) 
 	lb $t0,0($a0)		# $t0 = TamX SPRITE
 	lb $t1,1($a0)		# $t1 = TamY SPRITE
 	
-	la $t2, BUFFER		# $t2 = ENDERECO DO BUFFER
+	move $t2,$a1		# $t2 = ENDERECO DO BUFFER
 	move $t3,$zero		# $t3 = 0 (Índice do loop externo)
 	move $t4,$zero		# $t4 = 0 (Índice do loop interno)
 
 	li $t6,VGA_WIDTH	# $t6 = 320 (width in pixels)
-	mul $t5,$a1,$t6		# $t5 = 320 * x (pos eixo x no display)
-	add $t5,$t5,$a2		# $t5 = $t5 + $a2 (offset de memoria do inicio de onde é pra ser desenhada a sprite)
+	mul $t5,$a2,$t6		# $t5 = 320 * x (pos eixo x no display)
+	add $t5,$t5,$a3		# $t5 = $t5 + $a3 (offset de memoria do inicio de onde é pra ser desenhada a sprite)
 	
 	la $t7,VGA		# Carrega endereço inicial da VGA em $t7
 	add $t7,$t7,$t5		# endereço inicial de impressão do sprite
@@ -82,4 +109,3 @@ end_inner_loop:	addi $t7,$t9,VGA_WIDTH	# Move a posição inicial $t7 do display
 		j outer_loop		
 end_outer_loop:	jr $ra			# Fim do procedimento
 
-	
