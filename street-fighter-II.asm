@@ -7,13 +7,22 @@
 .eqv	VGA_WIDTH 320
 
 .data
+# BUFFERS
 BUFFER_SPRITE1:		.space 5300
 BUFFER_SPRITE2:		.space 5300	
+
+# FILENAMES
 SPRITE1_FILENAME: 	.asciiz "ryu1.bin"
 SPRITE2_FILENAME: 	.asciiz "ryu2.bin"
+
 # [SPRITE]            	[HEIGHT]	[WIDTH]	[HB1      ]  	[HB2      ] 	[HB3       ] 	[HB ATK	  ]	[HB DEF]
 SPRITE1_DATA: 	.byte 	85, 		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
 SPRITE2_DATA:	.byte 	85,		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0
+
+# KEYBOARD MOVES
+QUIT:		.asciiz "q"
+MOVE_RIGHT:	.asciiz "d"
+MOVE_LEFT:	.asciiz "a"
 
 .text
 Main:
@@ -40,9 +49,37 @@ Main:
 	li $a2,100
 	li $a3,200
 	jal PrintSprite
-
+	
+UpdateGame:
+	# Le um caracter do teclado, armazena em $v0[MARS]
+	li $v0, 12
+	syscall
+	
+	# Carrega os possiveis caracteres que movimentam a sprite $t0 = 'q', $t1 = 'd', $t2 = 'a'
+	la $t0, QUIT
+	la $t1, MOVE_RIGHT
+	la $t2, MOVE_LEFT
+	lb $t0, 0($t0)
+	lb $t1, 0($t1)
+	lb $t2, 0($t2)
+	
+	# Compara os valores e pula para o procedimento que move a sprite
+	beq $v0, $t0, Fim
+	beq $v0, $t1, move_sprite_right
+	beq $v0, $t2, move_sprite_left
+	
+move_sprite_right:
+	addi $a2, $a2, 5 	# Move a sprite 5 posicoes para a direita
+	jal PrintSprite
+	j UpdateGame
+	
+move_sprite_left:
+	addi $a2, $a2, -5	# Move a sprite 5 posicoes para a esquerda
+	jal PrintSprite
+	j UpdateGame
+	
 	# Fim do programa [MARS]
-	li $v0,10 
+Fim:	li $v0,10 
 	syscall
 	
 	# Fim do programa [FPGA]
@@ -108,4 +145,3 @@ end_inner_loop:	addi $t7,$t9,VGA_WIDTH	# Move a posição inicial $t7 do display
 		move $t4,$zero		# $t4 = 0 (zera o índice do inner loop)
 		j outer_loop		
 end_outer_loop:	jr $ra			# Fim do procedimento
-
