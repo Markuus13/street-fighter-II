@@ -26,6 +26,14 @@ MOVE_LEFT:	.asciiz "a"
 
 .text
 Main:
+	# Carrega os possiveis caracteres que movimentam a sprite $t0 = 'q', $t1 = 'd', $t2 = 'a'
+	la $t0, QUIT
+	la $t1, MOVE_RIGHT
+	la $t2, MOVE_LEFT
+	lb $s0, 0($t0)
+	lb $s1, 0($t1)
+	lb $s2, 0($t2)
+
 	# Lê o sprite 1 para o buffer 1
 	la $a0,SPRITE1_FILENAME
 	la $a1,BUFFER_SPRITE1
@@ -50,47 +58,52 @@ Main:
 	li $a3,200
 	jal PrintSprite
 	
-UpdateGame:
+	# Loop da luta
+	jal FightLoop
+	
+	# Fim do programa [MARS]
+	li $v0,10 
+	syscall
+	
+	# Fim do programa [FPGA]
+	# Fim: j Fim
+
+FightLoop:
+	# Salva o endereço de retorno na pilha
+	addi $sp, $sp, -4
+	sw  $ra, 0($sp)
+	
 	# Le um caracter do teclado, armazena em $v0[MARS]
 	li $v0, 12
 	syscall
 	
-	# Carrega os possiveis caracteres que movimentam a sprite $t0 = 'q', $t1 = 'd', $t2 = 'a'
-	la $t0, QUIT
-	la $t1, MOVE_RIGHT
-	la $t2, MOVE_LEFT
-	lb $t0, 0($t0)
-	lb $t1, 0($t1)
-	lb $t2, 0($t2)
-	
 	# Compara os valores e pula para o procedimento que move a sprite
-	beq $v0, $t0, Fim
-	beq $v0, $t1, move_sprite_right
-	beq $v0, $t2, move_sprite_left
-	
-move_sprite_right:
-	addi $a2, $a2, 5 	# Move a sprite 5 posicoes para a direita
-	jal PrintSprite
-	j UpdateGame
-	
-move_sprite_left:
-	addi $a2, $a2, -5	# Move a sprite 5 posicoes para a esquerda
-	jal PrintSprite
-	j UpdateGame
-	
-	# Fim do programa [MARS]
-Fim:	li $v0,10 
-	syscall
-	
-	# Fim do programa [FPGA]
-	# Fim: j Fim 
+	beq $v0, $s0, end_fight_loop
+	beq $v0, $s1, Move_sprite1_right
+	beq $v0, $s2, Move_sprite1_left
 
-InitialAnimation:
-GameMenu:
-MatchScreen:
-FightLoop:
-DefeatedOponentScreen:
-
+after_move: 
+	# Pega o endereço de retorno da pilha
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	
+	# Caso seja uma entrada não mapeada, não faz nada
+	j FightLoop
+	
+end_fight_loop: # Finaliza o loop 
+	addi $sp, $sp, 4
+	jr $ra
+	
+Move_sprite1_right:
+	addi $a3, $a3, 5 	# Move a sprite 5 posicoes para a direita
+	jal PrintSprite
+	j after_move
+			
+Move_sprite1_left:		
+	addi $a3, $a3, -5	# Move a sprite 5 posicoes para a esquerda
+	jal PrintSprite
+	j after_move
+	
 ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPRITE)
 	# Move ENDERECO BUFFER pro reg. temporário
 	move $t0, $a1
@@ -116,6 +129,7 @@ ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPR
 	jr $ra
 
 PrintSprite: #($a0 = ENDERECO SPRITE, $a1 = ENDERECO DO BUFFER, $a2 = pos_x, $a3 = pos_y) 
+	
 	lb $t0,0($a0)		# $t0 = TamX SPRITE
 	lb $t1,1($a0)		# $t1 = TamY SPRITE
 	
