@@ -15,7 +15,7 @@ BKG_BUFFER:		.space 76800
 # FILENAMES
 SPRITE1_FILENAME: 	.asciiz "ryu1.bin"
 SPRITE2_FILENAME: 	.asciiz "ryu2.bin"
-BKG_FILENAME:		.asciiz "menu.bin"
+BKG_FILENAME:		.asciiz "bkg_short_ryu.bin"
 
 # [SPRITE]            	[HEIGHT]	[WIDTH]	[HB1      ]  	[HB2      ] 	[HB3       ] 	[HB ATK	  ]	[HB DEF]
 SPRITE1_DATA: 	.byte 	85, 		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
@@ -39,16 +39,19 @@ Main:
 	# Lê o background para o bkg_buffer
 	la $a0, BKG_FILENAME
 	la $a1, BKG_BUFFER
+	la $a2, 76800
 	jal ReadFileToBuffer
 	
 	# Lê o sprite 1 para o buffer 1
 	la $a0, SPRITE1_FILENAME
 	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
 	jal ReadFileToBuffer
 	
 	# Lê o sprite 2 para o buffer 2
 	la $a0, SPRITE2_FILENAME
 	la $a1, BUFFER_SPRITE2
+	la $a2, 5300
 	jal ReadFileToBuffer
 	
 	# Printa o background no display
@@ -58,14 +61,14 @@ Main:
 	# Printa o sprite 1 no display
 	la $a0, SPRITE1_DATA
 	la $a1, BUFFER_SPRITE1
-	li $a2, 100
+	li $a2, 135
 	li $a3, 20
 	jal PrintSprite
 
 	# Printa o sprite 2 no display
 	la $a0, SPRITE2_DATA
 	la $a1, BUFFER_SPRITE2
-	li $a2, 100
+	li $a2, 135
 	li $a3, 200
 	jal PrintSprite
 	
@@ -115,9 +118,9 @@ Move_sprite1_left:
 	jal PrintSprite
 	j after_move
 	
-ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPRITE)
-	# Move ENDERECO BUFFER pro reg. temporário
-	move $t0, $a1
+ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPRITE, $a2 = TAMANHO DA SPRITE BYTES)
+	move $t0, $a1 # $t0 = ENDERECO BUFFER
+	move $t1, $a2 # $t1 = TAMANHO DA SPRITE (BYTES)
 	
 	# Abre o arquivo da sprite sprite - $a0 = ENDERECO NOME DO ARQUIVO
 	li $a1, 0
@@ -128,7 +131,7 @@ ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPR
 	# Le o sprite para a memoria BUFFER
 	move $a0, $v0
 	move $a1, $t0
-	li $a2, 76800
+	move $a2, $t1
 	li $v0, 14
 	syscall
 	
