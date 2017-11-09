@@ -73,7 +73,7 @@ Main:
 	jal PrintSprite
 	
 	# Loop da luta
-	jal FightLoop
+	jal GameLoop
 	
 	# Fim do programa [MARS]
 	li $v0, 10 
@@ -82,7 +82,7 @@ Main:
 	# Fim do programa [FPGA]
 	# Fim: j Fim
 
-FightLoop:
+GameLoop:
 	# Salva o endereço de retorno na pilha
 	addi $sp, $sp, -4
 	sw  $ra, 0($sp)
@@ -93,8 +93,8 @@ FightLoop:
 	
 	# Compara os valores e pula para o procedimento que move a sprite
 	beq $v0, $s0, end_fight_loop
-	beq $v0, $s1, Move_sprite1_right
-	beq $v0, $s2, Move_sprite1_left
+	beq $v0, $s1, move_sprite1_right
+	beq $v0, $s2, move_sprite1_left
 
 after_move: 
 	# Pega o endereço de retorno da pilha
@@ -102,18 +102,18 @@ after_move:
 	addi $sp, $sp, 4
 	
 	# Caso seja uma entrada não mapeada, não faz nada
-	j FightLoop
+	j GameLoop
 	
 end_fight_loop: # Finaliza o loop 
 	addi $sp, $sp, 4
 	jr $ra
 	
-Move_sprite1_right:
+move_sprite1_right:
 	addi $a3, $a3, 5 	# Move a sprite 5 posicoes para a direita
 	jal PrintSprite
 	j after_move
 			
-Move_sprite1_left:		
+move_sprite1_left:		
 	addi $a3, $a3, -5	# Move a sprite 5 posicoes para a esquerda
 	jal PrintSprite
 	j after_move
@@ -155,7 +155,10 @@ loop: 	beq $t0, $t1, fora	# Enquanto não chegar no fim do display
 	j loop
 fora:	jr $ra			# retorna pro caller
 
-	
+
+EraseOldSprite:	
+	jr $ra
+
 PrintSprite: #($a0 = ENDERECO SPRITE, $a1 = ENDERECO DO BUFFER, $a2 = pos_x, $a3 = pos_y) 
 	
 	lb $t0, 0($a0)		# $t0 = TamX SPRITE
