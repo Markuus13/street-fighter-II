@@ -16,10 +16,37 @@ BKG_BUFFER:		.space 76800
 SPRITE1_FILENAME: 	.asciiz "ryu1.bin"
 SPRITE2_FILENAME: 	.asciiz "ryu2.bin"
 BKG_FILENAME:		.asciiz "bkg_short_ryu.bin"
+BACK1_FILENAME:		.asciiz "back1.bin"
+BACK2_FILENAME:		.asciiz "back2.bin"
+BACK3_FILENAME:		.asciiz "back3.bin"
+BACK4_FILENAME:		.asciiz "back4.bin"
+BACK5_FILENAME:		.asciiz "back5.bin"
+BACK6_FILENAME:		.asciiz "back6.bin"
+
+FRONT1_FILENAME:	.asciiz "forward1.bin"
+FRONT2_FILENAME:	.asciiz "forward2.bin"
+FRONT3_FILENAME:	.asciiz "forward3.bin"
+FRONT4_FILENAME:	.asciiz "forward4.bin"
+FRONT5_FILENAME:	.asciiz "forward5.bin"
+FRONT6_FILENAME:	.asciiz "forward6.bin"
 
 # [SPRITE]            	[HEIGHT]	[WIDTH]	[HB1      ]  	[HB2      ] 	[HB3       ] 	[HB ATK	  ]	[HB DEF]
 SPRITE1_DATA: 	.byte 	85, 		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
 SPRITE2_DATA:	.byte 	85,		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0
+
+FRONT1_DATA: 	.byte 	83, 		53,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+FRONT2_DATA: 	.byte 	88, 		60,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+FRONT3_DATA: 	.byte 	92, 		64,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+FRONT4_DATA: 	.byte 	90, 		63,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+FRONT5_DATA: 	.byte 	91, 		54,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+FRONT6_DATA: 	.byte 	89, 		50,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+
+BACK1_DATA: 	.byte 	89, 		57,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+BACK2_DATA: 	.byte 	87, 		61,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+BACK3_DATA: 	.byte 	90, 		59,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+BACK4_DATA: 	.byte 	90, 		57,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+BACK5_DATA: 	.byte 	90, 		58,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+BACK6_DATA: 	.byte 	91, 		58,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
 
 # KEYBOARD MOVES
 QUIT:			.asciiz "q"
@@ -109,14 +136,160 @@ end_fight_loop: # Finaliza o loop
 	jr $ra
 	
 move_sprite1_right:
-	addi $a3, $a3, 5 	# Move a sprite 5 posicoes para a direita
-	jal PrintSprite
+	jal right_animation
+	# salvar aposicao (x,y) da sprite
 	j after_move
-			
-move_sprite1_left:		
-	addi $a3, $a3, -5	# Move a sprite 5 posicoes para a esquerda
+
+right_animation:
+	addi $sp, $sp, -4
+	sw  $ra, 0($sp)
+	
+	la $a0, FRONT1_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, FRONT1_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
 	jal PrintSprite
+	
+	la $a0, FRONT2_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, FRONT2_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, 1
+	jal PrintSprite
+	
+	la $a0, FRONT3_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, FRONT3_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, 2
+	jal PrintSprite
+	
+	la $a0, FRONT4_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, FRONT4_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, 3
+	jal PrintSprite
+	
+	la $a0, FRONT5_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, FRONT5_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, 4
+	jal PrintSprite
+	
+	la $a0, FRONT6_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, FRONT6_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, 5
+	jal PrintSprite
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+
+move_sprite1_left:
+	jal left_animation	
+	# salvar posicao (x,y) da sprite
 	j after_move
+
+left_animation:
+	addi $sp, $sp, -4
+	sw  $ra, 0($sp)
+	
+	la $a0, BACK1_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, BACK1_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	jal PrintSprite
+	
+	la $a0, BACK2_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, BACK2_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, -1
+	jal PrintSprite
+	
+	la $a0, BACK3_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, BACK3_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, -2
+	jal PrintSprite
+	
+	la $a0, BACK4_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, BACK4_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, -3
+	jal PrintSprite
+	
+	la $a0, BACK5_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, BACK5_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, -4
+	jal PrintSprite
+	
+	la $a0, BACK6_FILENAME
+	la $a1, BUFFER_SPRITE1
+	la $a2, 5300
+	jal ReadFileToBuffer
+	la $a0, BACK6_DATA
+	la $a1, BUFFER_SPRITE1
+	li $a2, 135
+	li $a3, 20
+	addi $a3, $a3, -5
+	jal PrintSprite
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
 	
 ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPRITE, $a2 = TAMANHO DA SPRITE BYTES)
 	move $t0, $a1 # $t0 = ENDERECO BUFFER
