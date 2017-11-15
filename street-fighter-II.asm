@@ -8,14 +8,17 @@
 
 .data
 # BUFFERS
+LAST_POS_SPRITE1:	.half 135, 20
 BUFFER_SPRITE1:		.space 5300
+LAST_POS_SPRITE2:	.half 135, 20
 BUFFER_SPRITE2:		.space 5300
 BKG_BUFFER:		.space 76800
 
 # FILENAMES
-SPRITE1_FILENAME: 	.asciiz "ryu1.bin"
+SPRITE1_FILENAME: 	.asciiz "forward1.bin"
 SPRITE2_FILENAME: 	.asciiz "ryu2.bin"
 BKG_FILENAME:		.asciiz "bkg_short_ryu.bin"
+
 BACK1_FILENAME:		.asciiz "back1.bin"
 BACK2_FILENAME:		.asciiz "back2.bin"
 BACK3_FILENAME:		.asciiz "back3.bin"
@@ -31,7 +34,7 @@ FRONT5_FILENAME:	.asciiz "forward5.bin"
 FRONT6_FILENAME:	.asciiz "forward6.bin"
 
 # [SPRITE]            	[HEIGHT]	[WIDTH]	[HB1      ]  	[HB2      ] 	[HB3       ] 	[HB ATK	  ]	[HB DEF]
-SPRITE1_DATA: 	.byte 	85, 		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
+SPRITE1_DATA: 	.byte 	83, 		53,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
 SPRITE2_DATA:	.byte 	85,		62,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0
 
 FRONT1_DATA: 	.byte 	83, 		53,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0,	0, 0, 0, 0, 	0, 0, 0, 0
@@ -290,7 +293,8 @@ left_animation:
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	jr $ra
-	
+
+
 ReadFileToBuffer: #($a0 = ENDERECO NOME DO ARQUIVO, $a1 = ENDERECO BUFFER DA SPRITE, $a2 = TAMANHO DA SPRITE BYTES)
 	move $t0, $a1 # $t0 = ENDERECO BUFFER
 	move $t1, $a2 # $t1 = TAMANHO DA SPRITE (BYTES)
@@ -329,10 +333,63 @@ loop: 	beq $t0, $t1, fora	# Enquanto não chegar no fim do display
 fora:	jr $ra			# retorna pro caller
 
 
-EraseOldSprite:	
-	jr $ra
+LastPosition: #($a1 = ENDERECO DO BUFFER DA SPRITE)
+	addi $t0, $a1, -4	# $t0 = ENDERECO que contém última posição da sprite
+	
+	lh $v0, 0($t0)		# $v0 = pos x
+	lh $v1, 2($t0)		# $v1 = pos y
+	
+	jr $ra			# retorna ao procedimento caller
+	
+
+EraseOldSprite: #($a0 = ENDERECO SPRITE, $a1 = ENDERECO ULTIMA POSICAO SPRITE)
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	jal LastPosition
+	
+	li $t0, 92		# $t0 = TamX SPRITE
+	li $t1, 64		# $t1 = TamY SPRITE
+	
+	la $t2, BKG_BUFFER	# $t2 = ENDERECO DO BKG BUFFER
+	move $t3, $zero		# $t3 = 0 (Índice do loop externo)
+	move $t4, $zero		# $t4 = 0 (Índice do loop interno)
+	
+	li $t6, VGA_WIDTH	# $t6 = 320 (width in pixels)
+	mul $t5, $v0, $t6	# $t5 = 320 * x (pos eixo x no display)
+	add $t5, $t5, $v1	# $t5 = $t5 + $v1 (offset de memoria do inicio de onde é pra ser apagada a sprite)
+	
+	la $t7, VGA		# Carrega endereço inicial da VGA em $t7
+	add $t7, $t7, $t5	# endereço inicial para apagar sprite
+	move $t9, $t7		# $t9 = $t7 ($t7 é usado como auxiliar do início da linha)
+	
+	add $t2, $t2, $t5	# ENDERECO BKG_BUFFER com offset do inicio da posição da sprite
+	move $t5, $t2		# $t5 = $t2 ($t2 é usado como auxiliar do ínicio da linha)
+	
+o_loop: beq $t3, $t0, end_o		# $t3 == $t0 ? end_outer_loop : proxima Instrução;
+i_loop: beq $t4, $t1, end_i		# $t4 == $t1 ? end_inner_loop : proxima Instrução;
+	lb $t8, 0($t2)			# $t8 = BKG_BUFFER[0]
+	sb $t8, 0($t7)			# IMG_DISPLAY[0] = $t8
+	addi $t2, $t2, 1		# $t2++ (BKG_BUFFER++)
+	addi $t7, $t7, 1		# $t7++ (IMG_DISPLAY++)
+	addi $t4, $t4, 1		# $t4++ (ÍNDICE DO INNER_LOOP++)
+	j i_loop
+end_i:	addi $t7, $t9, VGA_WIDTH	# Move a posição inicial $t7 do display pra próxima linha
+	addi $t2, $t5, VGA_WIDTH
+	move $t9, $t7			# $t9 = $t7 ($t7 -> aux)
+	move $t5, $t2			# $t5 = $t2 ($t2 -> BKG_BUFFER aux)
+	addi $t3, $t3, 1		# $t3++ (INDICE DO OUTER_LOOP++)
+	move $t4, $zero			# $t4 = 0 (zera o índice do inner loop)
+	j o_loop		
+end_o:	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra				# Fim do procedimento
 
 PrintSprite: #($a0 = ENDERECO SPRITE, $a1 = ENDERECO DO BUFFER, $a2 = pos_x, $a3 = pos_y) 
+	addi $sp, $sp, -4	# Aloca uma word na stack
+	sw $ra, 0($sp)		# Salva o $ra em 0($sp)
+	
+	jal EraseOldSprite	# Chama procedimento pra remover sprite anterior
 	
 	lb $t0, 0($a0)		# $t0 = TamX SPRITE
 	lb $t1, 1($a0)		# $t1 = TamY SPRITE
@@ -362,4 +419,6 @@ end_inner_loop:	addi $t7, $t9, VGA_WIDTH	# Move a posição inicial $t7 do displ
 		addi $t3, $t3, 1		# $t3++ (INDICE DO OUTER_LOOP++)
 		move $t4, $zero			# $t4 = 0 (zera o índice do inner loop)
 		j outer_loop		
-end_outer_loop:	jr $ra				# Fim do procedimento
+end_outer_loop:	lw $ra, 0($sp)			# Carrega o valor anterior de $ra que estava na stack
+		addi $sp, $sp, 4		# Desaloca a word da stack
+		jr $ra				# Fim do procedimento
