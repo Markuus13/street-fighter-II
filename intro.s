@@ -102,7 +102,7 @@ Opening:
 	li $a0,170
 	li $a1,105
 	la $a2,COINS_DATA
-	la $a3,COINS_DATA
+	li $a3,0
 	jal PrintSprite
 	# Checa teclado
 	li $s1,60000 # counter
@@ -112,7 +112,7 @@ Opening:
 	li $a1,105
 	la $a2,COINS_DATA
 	la $a3,OPN_DATA
-	jal PrintSprite
+	jal BkgUpdate
 	# Checa teclado
 	li $s1,20000 # Contador Delay
 	jal wait_key
@@ -140,20 +140,33 @@ Select_Screen:
 	li $a0,155
 	li $a1,98
 	la $a2,P1SQUARE_DATA
-	la $a3,P1SQUARE_DATA
+	li $a3,0
 	jal PrintSprite
 	
-	# Imprime o Ryu
+	# Imprime o Ryu para P1
 	li $a0,138
 	li $a1,0
 	la $a2,RYUPIC_DATA
-	la $a3,RYUPIC_DATA
+	li $a3,0
 	jal PrintSprite
 	
 	li $a0,114
 	li $a1,15
 	la $a2,RYUNAME_DATA
-	la $a3,RYUNAME_DATA
+	li $a3,0
+	jal PrintSprite
+	
+	# Imprime o Ryu para P2
+	li $a0,138
+	li $a1,214
+	la $a2,RYUPIC_DATA
+	li $a3,1
+	jal PrintSprite
+	
+	li $a0,114
+	li $a1,222
+	la $a2,RYUNAME_DATA
+	li $a3,0
 	jal PrintSprite
 	
 exit:	
@@ -221,11 +234,11 @@ PrintBkg: # Memoria SRAM para VGA ($a1 = SRAM DO BKG PRA IMPRIMIR)		#ALTERA: $a0
 	VGA_out:
 	jr $ra
 
-PrintSprite:	#($a0 = pos_x, $a1 = pos_y, $a2 = tam_addr, $a3 = ENDERECO NA SRAM)	#ALTERA: $a0,$a1,$a2,$v0,$s7
+BkgUpdate:	#($a0 = pos_x, $a1 = pos_y, $a2 = tamanho, $a3 = endereco SRAM do bkg)	#ALTERA: $a0,$a1,$a2,$a3,$v0,$s7
 											#	 $t0,$t1,$t2,$t3,$t4,
 											#	 $t5,$t6,$t7,$t8,$t9
-	lb $t0,4($a2)		# $t0 = TamX SPRITE
-	lb $t1,5($a2)		# $t1 = TamY SPRITE
+	lb $t0,4($a2)		# $t0 = TamY SPRITE
+	lb $t1,5($a2)		# $t1 = TamX SPRITE
 	lw $t2,0($a3)		# $t2 = ENDERECO NA SRAM
 	
 	move $t3,$zero		# $t3 = 0 (Índice do loop externo)
@@ -239,24 +252,70 @@ PrintSprite:	#($a0 = pos_x, $a1 = pos_y, $a2 = tam_addr, $a3 = ENDERECO NA SRAM)
 	add $t7,$t7,$t5		# endereço inicial de impressão do sprite
 	move $t9,$t7		# $t9 = $t7 ($t7 é usado como auxiliar do início da linha)
 
-	outer_loop: 
-	inner_loop: 
-	beq $t3,$t0,end_outer_loop	# $t3 == $t0 ? end_outer_loop : proxima Instrução;
-	beq $t4,$t1,end_inner_loop	# $t4 == $t1 ? end_inner_loop : proxima Instrução;
+	BUouter_loop: 
+	BUinner_loop: 
+	beq $t3,$t0,BUend_outer_loop	# $t3 == $t0 ? end_outer_loop : proxima Instrução;
+	beq $t4,$t1,BUend_inner_loop	# $t4 == $t1 ? end_inner_loop : proxima Instrução;
 	lb $t8,0($t2)		# $t8 = BUFFER[0]
 	sb $t8,0($t7)		# IMG_DISPLAY[0] = $t8
 	addi $t2,$t2,1		# $t2++ (BUFFER++)
 	addi $t7,$t7,1		# $t7++ (IMG_DISPLAY++)
 	addi $t4,$t4,1		# $t4++ (ÍNDICE DO INNER_LOOP++)
-	j inner_loop
+	j BUinner_loop
 	
-	end_inner_loop:	
+	BUend_inner_loop:	
 	addi $t7,$t9,320	# Move a posição inicial $t7 do display pra próxima linha
 	move $t9,$t7		# $t9 = $t7 ($t7 -> aux)
 	addi $t3,$t3,1		# $t3++ (INDICE DO OUTER_LOOP++)
 	move $t4,$zero		# $t4 = 0 (zera o índice do inner loop)
-	j outer_loop		
+	j BUouter_loop		
 	
-	end_outer_loop:
+	BUend_outer_loop:
 	jr $ra			# Fim do procedimento
 
+
+PrintSprite:	#($a0 = pos_x, $a1 = pos_y, $a2 = label da estrutura .data, $a3 = inverte?)	#ALTERA: $a0,$a1,$a2,$v0,$s7
+												#	 $t0,$t1,$t2,$t3,$t4,
+												#	 $t5,$t6,$t7,$t8,$t9
+	lb $t0,4($a2)		# $t0 = TamY SPRITE
+	lb $t1,5($a2)		# $t1 = TamX SPRITE
+	lw $t2,0($a2)		# $t2 = ENDERECO NA SRAM
+	
+	move $t3,$zero		# $t3 = 0 (Índice do loop externo)
+	move $t4,$zero		# $t4 = 0 (Índice do loop interno)
+
+	li $t6,320		# $t6 = 320 (width in pixels)
+	mul $t5,$a0,$t6		# $t5 = 320 * x (pos eixo x no display)
+	add $t5,$t5,$a1		# $t5 = $t5 + $a3 (offset de memoria do inicio de onde é pra ser desenhada a sprite)
+	
+	la $t7,VGAi		# Carrega endereço inicial da VGA em $t7
+	add $t7,$t7,$t5		# endereço inicial de impressão do sprite
+	move $t9,$t7		# $t9 = $t7 ($t7 é usado como auxiliar do início da linha)
+	
+	mul $t5,$t1,$a3		# $a3 = tamX * (bool inverte?) - leitura invertida da sprite
+	add $t2,$t2,$t5		# Endereco atualizado para leitura invertida ou nao
+
+	PSouter_loop: 
+	PSinner_loop: 
+	beq $t3,$t0,PSend_outer_loop	# $t3 == $t0 ? end_outer_loop : proxima Instrução;
+	beq $t4,$t1,PSend_inner_loop	# $t4 == $t1 ? end_inner_loop : proxima Instrução;
+	lb $t8,0($t2)		# $t8 = BUFFER[inicio ou fim de linha]
+	sb $t8,0($t7)		# IMG_DISPLAY[0] = $t8
+	addi $t2,$t2,1		# $t2++ (BUFFER++)
+	sub $t2,$t2,$a3		# INVERTE? - subtrai 2x
+	sub $t2,$t2,$a3		# INVERTE? - para $t2--
+	addi $t7,$t7,1		# $t7++ (IMG_DISPLAY++)
+	addi $t4,$t4,1		# $t4++ (ÍNDICE DO INNER_LOOP++)
+	j PSinner_loop
+	
+	PSend_inner_loop:	
+	addi $t7,$t9,320	# Move a posição inicial $t7 do display pra próxima linha
+	move $t9,$t7		# $t9 = $t7 ($t7 -> aux)
+	addi $t3,$t3,1		# $t3++ (INDICE DO OUTER_LOOP++)
+	move $t4,$zero		# $t4 = 0 (zera o índice do inner loop)
+	add $t2,$t2,$t5		# INVERTE? - Novo fim de linha
+	add $t2,$t2,$t5		# INVERTE? - 2x para fim da proxima linha
+	j PSouter_loop		
+	
+	PSend_outer_loop:
+	jr $ra			# Fim do procedimento
