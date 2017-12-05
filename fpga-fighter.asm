@@ -31,16 +31,35 @@
 ## Data ##
 .eqv INS_COIN_BYTE_QTD	1700		# Bytes
 
+################
+### Keyboard ###
+################
+## Player 1 ##
+.eqv 	ESQ_1	0x1C000000       #A -> Andar Esquerda
+.eqv 	DIR_1	0x23000000       #D -> Andar Direita
+.eqv 	CIMA_1	0x1D000000       #W -> Pular
+.eqv 	BAIXO_1	0x1B000000       #S -> Abaixar
+.eqv 	SOCO_1	0x31000000       #N -> Soco
+.eqv	CHUTE_1	0x32000000	 #B -> Chute
+.eqv	HADUKEN 0xF023F02A	 #HADUKEN
+
+.eqv 	A2	0x10000000       #A2 -> Andar Esquerda mapeado memoria
+.eqv 	S2	0x08000000       #S2 -> Abaixar mapeado memoria
+.eqv	D2	0x00000008	 #D2 -> Andar Direita mapeado memoria
+.eqv 	W2	0x20000000       #W -> Pular mapeado memoria
+.eqv	N2	0x00020000	 #N2 -> Soco mapeado memoria
+.eqv	B2	0x00040000	 #B2-> Chute mapeado memoria
+
 .data
 .text
 main:
 	# Keyboard Mapping
-	#la $s0,0xFF100100  		# BUFFER1
-	#la $s1,0xFF100104		# BUFFER2
-	#la $s2,0xFF100520		# KEY0
-	#la $s3,0xFF100524		# KEY1
-	#la $s4,0xFF100528		# KEY2
-	#la $s5,0xFF10052C		# KEY3
+	la $s0,0xFF100100  		# BUFFER1
+	la $s1,0xFF100104		# BUFFER2
+	la $s2,0xFF100520		# KEY0
+	la $s3,0xFF100524		# KEY1
+	la $s4,0xFF100528		# KEY2
+	la $s5,0xFF10052C		# KEY3
 
 	# Print inital screen
 	#nop
@@ -50,12 +69,14 @@ main:
 	#nop
 	#jal selectScreen
 
+	# Set initial position of Fighter 1
 	li $a0, FGHT1_ADDR_SRAM
 	li $a1, 135
 	li $a2, 20
 	jal setFighterPositions
 	nop
 
+	# Set initial position of Fighter 2
 	li $a0, FGHT2_ADDR_SRAM
 	li $a1, 135
 	li $a2, 120
@@ -65,10 +86,87 @@ main:
 	jal startFight
 	nop
 
+loopGame:
+	lw $t0,0($s0)
+	lw $t1,0($s1)
+	sll $t2,$t0,24	#descolando buffer em 24 bits para esquerda
+	sll $t3,$t0,16
+
+	lw $s6,0($s2)
+	lw $s7,0($s3)
+	lw $t6,0($s4)
+	lw $t8,0($s5)
+
+	beq $t2, DIR_1, DIR_1_PRESS
+	beq $t2, ESQ_1, ESQ_1_PRESS
+	nop
+	j loopGame
+
+DIR_1_PRESS:
+	andi $s7, $s7, D2
+      	beq $s7, D2, ANDAR_DIR_1
+    	nop
+    	j loopGame
+
+ANDAR_DIR_1:
+
+	# get pos atual
+	li $a0, FGHT1_ADDR_SRAM
+	nop
+	jal getFighterPositions
+
+	li $a0, FGHT1_ADDR_SRAM
+	move $a1, $v0
+	addi $a2, $v1, 5
+
+	nop
+	jal setFighterPositions
+	nop
+
+	li $a0, FGHT1_SPR_SRAM
+	li $a3, 0
+	jal printSprite
+	nop
+
+	nop
+	j loopGame
+
+ESQ_1_PRESS:
+	andi $s6,$s6,A2
+    	beq $s6,A2,ANDAR_ESQ_1
+
+    	nop
+    	j loopGame
+
+ANDAR_ESQ_1:
+	# get pos atual
+	li $a0, FGHT1_ADDR_SRAM
+	nop
+	jal getFighterPositions
+
+	li $a0, FGHT1_ADDR_SRAM
+
+	move $a1, $v0
+	addi $a2, $v1, -5
+
+	nop
+	jal setFighterPositions
+
+	nop
+	li $a0, FGHT1_SPR_SRAM
+	li $a3, 0
+	jal printSprite
+	nop
+
+	nop
+	j loopGame
+
 	nop
 END: 	j END
 
-
+###############################
+###	    Fighters	   ####
+###############################
 setFighterPositions: #($a0 = FIGHTER_ADDR, $a1 = x, $a2 = y)
 	# Set pos X
 	addi $a0, $a0, 4
@@ -82,6 +180,22 @@ setFighterPositions: #($a0 = FIGHTER_ADDR, $a1 = x, $a2 = y)
 	jr $ra
 
 
+getFighterPositions: #($a0 = FIGHTER_ADDR) -> $v0 = x, $v1 = y
+	# Get pos X
+	addi $a0, $a0, 4
+	lw $v0, 0($a0)
+
+	# Get pos Y
+	addi $a0, $a0, 4
+	lw $v1, 0($a0)
+
+	nop
+	jr $ra
+
+
+################################
+######       Fight       #######
+################################
 startFight:
 	addi $sp $sp, -4
 	sw $ra, 0($sp)
@@ -134,8 +248,8 @@ startFight:
 	jal printSprite
 	nop
 
-	addi $sp, $sp, 4
 	lw $ra, 0($sp)
+	addi $sp, $sp, 4
 
 	nop
 	jr $ra
@@ -263,24 +377,24 @@ printSprite: #($a0 = Sprite Address, $a3 = Invert?[1 or 0])
 	li $t6, VGA_WIDTH		# $t6 = 320 (width in pixels)
 	mult $a1, $t6			# $t5 = 320 * x (position x in display)
 	mflo $t5
-	add $t5, $t5, $a2		# $t5 = $t5 + $a3 (offset de memoria do inicio de onde � pra ser desenhada a sprite)
+	add $t5, $t5, $a2		# $t5 = $t5 + $a3 (offset de memoria do inicio de onde é pra ser desenhada a sprite)
 
 	la $t7, VGA_INI_ADDR		# $t7 = VGA_INI_ADDR
 	add $t7, $t7, $t5		# $t7 = Initial VGA address to print sprite
-	move $t9, $t7			# $t9 = $t7 ($t7 � usado como auxiliar do in�cio da linha)
+	move $t9, $t7			# $t9 = $t7 ($t7 é usado como auxiliar do início da linha)
 
-outer_loop: 	beq $t3, $t0, end_outer_loop	# $t3 == $t0 ? end_outer_loop : proxima Instru��o;
-inner_loop: 	beq $t4, $t1, end_inner_loop	# $t4 == $t1 ? end_inner_loop : proxima Instru��o;
+outer_loop: 	beq $t3, $t0, end_outer_loop	# $t3 == $t0 ? end_outer_loop : proxima Instrução;
+inner_loop: 	beq $t4, $t1, end_inner_loop	# $t4 == $t1 ? end_inner_loop : proxima Instrução;
 		lb $t8, 0($t2)			# $t8 = SPRITE_ADDRESS[0]
 		sb $t8, 0($t7)			# VGA[0] = $t8 = SPRITE_ADDRESS[0]
 		addi $t2, $t2, 1		# $t2++ (SPRITE_ADDRESS++)
 		addi $t7, $t7, 1		# $t7++ (VGA++)
 		addi $t4, $t4, 1		# $t4++ (Internal loop index ++)
 		j inner_loop
-end_inner_loop:	addi $t7, $t9, VGA_WIDTH	# Move a posi��o inicial $t7 do display pra pr�xima linha
+end_inner_loop:	addi $t7, $t9, VGA_WIDTH	# Move a posição inicial $t7 do display pra próxima linha
 		move $t9, $t7			# $t9 = $t7 ($t7 -> aux)
 		addi $t3, $t3, 1		# $t3++ (INDICE DO OUTER_LOOP++)
-		move $t4, $zero			# $t4 = 0 (zera o �ndice do inner loop)
+		move $t4, $zero			# $t4 = 0 (zera o índice do inner loop)
 		j outer_loop
 end_outer_loop:	nop
 		jr $ra				# Fim do procedimento
@@ -300,22 +414,22 @@ printColor: #($a0 = Hex Color, $a1 = posX, $a2 = posY)
 	li $t6, VGA_WIDTH		# $t6 = 320 (width in pixels)
 	mult $a1, $t6			# $t5 = 320 * x (position x in display)
 	mflo $t5
-	add $t5, $t5, $a2		# $t5 = $t5 + $a3 (offset de memoria do inicio de onde � pra ser desenhada a sprite)
+	add $t5, $t5, $a2		# $t5 = $t5 + $a3 (offset de memoria do inicio de onde é pra ser desenhada a sprite)
 
 	la $t7, VGA_INI_ADDR		# $t7 = VGA_INI_ADDR
 	add $t7, $t7, $t5		# $t7 = Initial VGA address to print sprite
-	move $t9, $t7			# $t9 = $t7 ($t7 � usado como auxiliar do in�cio da linha)
+	move $t9, $t7			# $t9 = $t7 ($t7 é usado como auxiliar do início da linha)
 
-outer_loop2: 	beq $t3, $t0, end_outer_loop2	# $t3 == $t0 ? end_outer_loop : proxima Instru��o;
-inner_loop2: 	beq $t4, $t1, end_inner_loop2	# $t4 == $t1 ? end_inner_loop : proxima Instru��o;
+outer_loop2: 	beq $t3, $t0, end_outer_loop2	# $t3 == $t0 ? end_outer_loop : proxima Instrução;
+inner_loop2: 	beq $t4, $t1, end_inner_loop2	# $t4 == $t1 ? end_inner_loop : proxima Instrução;
 		sb $t2, 0($t7)			# VGA[0] = $t8 = SPRITE_ADDRESS[0]
 		addi $t7, $t7, 1		# $t7++ (VGA++)
 		addi $t4, $t4, 1		# $t4++ (Internal loop index ++)
 		j inner_loop2
-end_inner_loop2:addi $t7, $t9, VGA_WIDTH	# Move a posi��o inicial $t7 do display pra pr�xima linha
+end_inner_loop2:addi $t7, $t9, VGA_WIDTH	# Move a posição inicial $t7 do display pra próxima linha
 		move $t9, $t7			# $t9 = $t7 ($t7 -> aux)
 		addi $t3, $t3, 1		# $t3++ (INDICE DO OUTER_LOOP++)
-		move $t4, $zero			# $t4 = 0 (zera o �ndice do inner loop)
+		move $t4, $zero			# $t4 = 0 (zera o índice do inner loop)
 		j outer_loop2
 end_outer_loop2:nop
 		jr $ra				# Fim do procedimento
